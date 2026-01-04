@@ -3,6 +3,7 @@ name: run-private-code
 on:
   
     
+    
   workflow_dispatch: {}
 
 
@@ -21,10 +22,17 @@ jobs:
       YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
       YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
 
-      # chon thumb tieu de
-      SEQ_BASE_RUN: "1"
-      TITLE_START: "1"
-      THUMB_START: "247"
+      # chon thumb tieude bat dau
+      SEQ_BASE_RUN: "55"
+      TITLE_START: "10"
+      THUMB_START: "10"
+
+      # công tắt chọn poll hoặc cloudflare
+      IMG_PROVIDER: cloudflare
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      CF_API_TOKEN:  ${{ secrets.CF_API_TOKEN }}
+      CF_MODEL: "@cf/black-forest-labs/flux-1-schnell"
+      CF_STEPS: "8"
 
     steps:
       - name: Checkout wrapper (repo PUBLIC)
@@ -140,11 +148,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system deps (ffmpeg + libsndfile)
+      - name: Install system deps (ffmpeg)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libsndfile1
-
+          sudo apt-get install -y ffmpeg
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -164,16 +171,16 @@ jobs:
           python -m pip install "torch==2.3.1" "torchaudio==2.3.1" --index-url https://download.pytorch.org/whl/cpu
           # Whisper (gói đúng tên: openai-whisper)
           python -m pip install "openai-whisper==20231117"
-          
-          # NEW: inaSpeechSegmenter (lọc nhạc / speech-music segmentation)
-          python -m pip install "inaSpeechSegmenter==0.8.0"
 
-          # (tuỳ chọn) test import cho chắc
-          python -c "from inaSpeechSegmenter import Segmenter; print('inaSpeechSegmenter OK')"
+          # YAMNet (TensorFlow) để lọc nhạc
+          python -m pip install tensorflow-cpu tensorflow-hub
 
+
+          # loc banner qr
+          python -m pip install opencv-python-headless
           # Kiểm tra import (dùng python -c để tránh lỗi YAML here-doc)
           python -c "import sys; import whisper, torch, torchaudio; print('Whisper/Torch OK:', whisper.__version__, torch.__version__)"
-          
+
       - name: Install Python deps
         run: |
           set -e
@@ -185,7 +192,7 @@ jobs:
             echo "[INFO] No requirements*.txt found — install tối thiểu"
             pip install Pillow opencv-python-headless numpy gdown \
                         google-api-python-client google-auth google-auth-httplib2 \
-                        imageio-ffmpeg
+                        imageio-ffmpeg tensorflow-cpu tensorflow-hub
           fi
 
       # CHẠY CODE trong repo PRIVATE (upload YouTube trực tiếp)
